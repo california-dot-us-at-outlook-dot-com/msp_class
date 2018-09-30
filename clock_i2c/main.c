@@ -22,6 +22,20 @@
 #define portSdaIn portDir &= ~SDA
 #define portSclOut portDir |= SCL
 
+
+#define SDA1 BIT0
+#define SCL1 BIT1
+#define port1Out P4OUT
+#define port1In P4IN
+#define port1Dir P4DIR
+#define port1Din port1Dir &= ~(SDA1+SCL1)
+#define port1Dout port1Dir |= SDA1+SCL1
+#define portSda1Out port1Dir |= SDA1
+#define portScl1In port1Dir &= ~SCL1
+#define portSda1In port1Dir &= ~SDA1
+#define portScl1Out port1Dir |= SCL1
+
+
 //#define uchar unsigned char
 
 
@@ -201,6 +215,183 @@ unsigned char HEX2BCD(unsigned char a){
     return b*16+c;
 }
 
+//√Î±Ì
+unsigned long a=0;
+#pragma vector = TIMERA0_VECTOR
+__interrupt void Timer_A(void){
+    //P6OUT=~P6OUT;
+    a++;
+}
+
+void inTime_init(){
+    TACCTL0=CCIE;//+CM1+CM0;//+CAP;
+
+    TACCR0=32768;
+    //CCR0=32768;
+    TACTL=TASSEL_1+MC_1;
+    _EINT();
+}
+
+//
+//I2C 1602
+void Sda1(unsigned char a){
+    if(a==0){
+        port1Out &= (~SDA1);
+    }else{
+        port1Out |= SDA1;
+    }
+}
+void Scl1(unsigned char a){
+    if(a==0){
+        port1Out &= (~SCL1);
+    }else{
+        port1Out |= SCL1;
+    }
+}
+
+
+void start1(){
+    port1Dout;
+    Sda1(1);
+    delay_us(10);
+    Scl1(1);
+    delay_us(10);
+    Sda1(0);
+    delay_us(10);
+    Scl1(0);
+    delay_us(10);
+}
+
+void stop1(){
+    port1Dout;
+    Sda1(0);
+    delay_us(10);
+    Scl1(1);
+    delay_us(10);
+    Sda1(1);
+    delay_us(10);
+}
+
+unsigned char w1(unsigned char d){
+    unsigned char a=0,b=0;
+    port1Dout;
+    for(a=0;a<8;a++){
+        Sda1(d>>7);
+        d=(d<<1);
+        delay_us(10);
+        Scl1(1);
+        delay_us(10);
+        Scl1(0);
+        delay_us(10);
+    }
+    Sda1(1);
+    delay_us(10);
+    Scl1(1);
+    portSda1In;
+    while(port1In&SDA1){
+        b++;
+        if(b>200){
+            Scl1(0);
+            delay_us(10);
+            return 0;
+        }
+    }
+    Scl1(0);
+    delay_us(10);
+    return 1;
+}
+
+unsigned char r1(){
+    unsigned char a=0,d=0;
+    portSda1Out;
+    Sda1(1);
+    portSda1In;
+    delay_us(10);
+    for(a=0;a<8;a++){
+        Scl1(1);
+        delay_us(10);
+        d <<= 1;
+        d |= (port1In&SDA1);
+        delay_us(10);
+        Scl1(0);
+        delay_us(10);
+    }
+    return d;
+}
+
+
+void I2C1602_wd(unsigned char d){
+    unsigned char D;
+    start1();
+    w1(0x4e);
+    D=d&0xf0;
+    D|=0x0d;
+    w1(D);
+    D&=0xF9;
+    w1(D);
+    D=(d&0x0f)<<4;
+    D|=0x0d;
+    w1(D);
+    D&=0xf9;
+    w1(D);
+    stop1();
+}
+
+void I2C1602_wc(unsigned char d){
+    unsigned char D=0x00;
+    start1();
+    w1(0x4e);
+    D=d&0xf0;
+    D|=0x0c;
+    w1(D);
+    D&=0xf8;
+    w1(D);
+
+    D=(d&0x0f)<<4;
+    D|=0x0c;
+    w1(D);
+    D&=0xf8;
+    w1(D);
+    stop1();
+}
+
+
+void I2C1602_init(){
+    delay_ms(10);
+    I2C1602_wc(0x33);
+    delay_ms(5);
+    I2C1602_wc(0x32);
+    delay_ms(5);
+    I2C1602_wc(0x28);
+    delay_ms(5);
+    I2C1602_wc(0x0c);
+    delay_ms(5);
+    I2C1602_wc(0x06);
+    delay_ms(5);
+    I2C1602_wc(0x01);
+    delay_ms(5);
+    delay_ms(10);
+
+    delay_ms(10);
+    I2C1602_wc(0x33);
+    delay_ms(5);
+    I2C1602_wc(0x32);
+    delay_ms(5);
+    I2C1602_wc(0x28);
+    delay_ms(5);
+    I2C1602_wc(0x0c);
+    delay_ms(5);
+    I2C1602_wc(0x06);
+    delay_ms(5);
+    I2C1602_wc(0x01);
+    delay_ms(5);
+    delay_ms(10);
+
+
+}
+//end
+
+
 
 void main(void)
 {
@@ -208,6 +399,7 @@ void main(void)
 	unsigned char sec,min,hou,day,mon,yea;
 	uchar bia=8;
 	uchar aia=2;
+	uchar cia=1;
 	Clock_Init();
 	P6DIR=0xff;
 	P6OUT=0xff;
@@ -216,15 +408,22 @@ void main(void)
     P5SEL=0x00;
     P5DIR=0xff;
     init();
+    P6DIR=0xff;
+    inTime_init();
     /*
-    WC(0x00,0x00);
-    WC(0x01,0x45);
-    WC(0x02,0x21);
-    WC(0x04,0x29);
-    WC(0x05,0x09);
-    WC(0x06,0x18);
+    WC(0x00,0x00);//sec
+    WC(0x01,0x45);//min
+    WC(0x02,0x21);//hou
+    WC(0x04,0x29);//day
+    WC(0x05,0x09);//mon
+    WC(0x06,0x18);//yea
     */
+    I2C1602_init();
+
 	while(1){
+	    if(a>999){
+	        a=0;
+	    }
 	    sec=BCD2HEX(RC(0x00));
 	    min=BCD2HEX(RC(0x01));
 	    hou=BCD2HEX(RC(0x02));
@@ -275,6 +474,82 @@ void main(void)
 	    wd((sec)/10+'0');
 	    wc(0xc0+7+bia);
 	    wd((sec%10)+'0');
+
+	    wc(0xc0+2+cia);
+	    wd(a%10+'0');
+	    wc(0xc0+1+cia);
+	    wd((a%100)/10+'0');
+	    wc(0xc0+cia);
+	    wd(a/100+'0');
+
+	    wc(0xc0);
+	    wd('<');
+	    wc(0xc0+3+cia);
+	    wd('>');
+
+	    //I2C
+
+
+        I2C1602_wc(0x80);
+        I2C1602_wd('2');
+        I2C1602_wc(0x81);
+        I2C1602_wd('0');
+
+        I2C1602_wc(0x80+aia);
+        I2C1602_wd((yea)/10+'0');
+        I2C1602_wc(0x80+1+aia);
+        I2C1602_wd((yea%10)+'0');
+
+        I2C1602_wc(0x80+2+aia);
+        I2C1602_wd('/');
+
+        I2C1602_wc(0x80+3+aia);
+        I2C1602_wd((mon)/10+'0');
+        I2C1602_wc(0x80+4+aia);
+        I2C1602_wd((mon%10)+'0');
+
+        I2C1602_wc(0x80+5+aia);
+        I2C1602_wd('/');
+
+        I2C1602_wc(0x80+6+aia);
+        I2C1602_wd((day)/10+'0');
+        I2C1602_wc(0x80+7+aia);
+        I2C1602_wd((day%10)+'0');
+
+        I2C1602_wc(0xc0+bia);
+        I2C1602_wd((hou)/10+'0');
+        I2C1602_wc(0xc0+1+bia);
+        I2C1602_wd((hou%10)+'0');
+
+        I2C1602_wc(0xc0+2+bia);
+        I2C1602_wd(':');
+
+        I2C1602_wc(0xc0+3+bia);
+        I2C1602_wd((min)/10+'0');
+        I2C1602_wc(0xc0+4+bia);
+        I2C1602_wd((min%10)+'0');
+
+        I2C1602_wc(0xc0+6+bia);
+        I2C1602_wd((sec)/10+'0');
+        I2C1602_wc(0xc0+7+bia);
+        I2C1602_wd((sec%10)+'0');
+
+        I2C1602_wc(0xc0+2+cia);
+        I2C1602_wd(a%10+'0');
+        I2C1602_wc(0xc0+1+cia);
+        I2C1602_wd((a%100)/10+'0');
+        I2C1602_wc(0xc0+cia);
+        I2C1602_wd(a/100+'0');
+
+        I2C1602_wc(0xc0);
+        I2C1602_wd('<');
+        I2C1602_wc(0xc0+3+cia);
+        I2C1602_wd('>');
+
 	}
 
+    /*while(1){
+        I2C1602_wc(0x80);
+        I2C1602_wd('Y');
+    }*/
 }
