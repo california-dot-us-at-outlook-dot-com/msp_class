@@ -217,10 +217,13 @@ unsigned char HEX2BCD(unsigned char a){
 
 //秒表
 unsigned long a=0;
+unsigned char pause=0;
 #pragma vector = TIMERA0_VECTOR
 __interrupt void Timer_A(void){
     //P6OUT=~P6OUT;
-    a++;
+    if(pause==0){
+        a++;
+    }
 }
 
 void inTime_init(){
@@ -390,6 +393,24 @@ void I2C1602_init(){
 
 }
 //end
+//interrupt_external
+unsigned char ci=0;
+unsigned char ifci=0;
+
+#pragma vector = PORT1_VECTOR
+__interrupt void Port1_ISR(void){
+    if((P1IN & BIT0)==0){
+        ifci=1;
+    }else if((P1IN &BIT1)==0){
+        if(pause==0){
+            pause=1;
+        }else{
+            pause=0;
+        }
+    }
+    P1IFG &= 0;
+}
+//
 
 
 
@@ -410,6 +431,17 @@ void main(void)
     init();
     P6DIR=0xff;
     inTime_init();
+
+//init of externalInterruption
+    P1DIR &= BIT1+BIT0;
+    P1IES |= BIT0+BIT1; //0:上升沿；    1：下降沿
+    P1IE |= BIT0+BIT1;  //中断允许，1为允许
+    P1IFG &= 0;  //中断标志，0为可接受中断
+
+
+    _EINT();    //开启总中断
+
+
     /*
     WC(0x00,0x00);//sec
     WC(0x01,0x45);//min
@@ -430,7 +462,7 @@ void main(void)
 	    day=BCD2HEX(RC(0x04));
 	    mon=BCD2HEX(RC(0x05));
 	    yea=BCD2HEX(RC(0x06));
-
+/*
 	    wc(0x80);
 	    wd('2');
 	    wc(0x81);
@@ -486,11 +518,48 @@ void main(void)
 	    wd('<');
 	    wc(0xc0+3+cia);
 	    wd('>');
+*/
+
+
+	    if(ifci==1){
+	        ifci=0;
+	        if(ci<4){
+	            wc(0x80+(ci+1)*4-2);
+	            wd(a%10+'0');
+	            wc(0x80+(ci+1)*4-3);
+	            wd((a/10)%10+'0');
+	            wc(0x80+(ci+1)*4-4);
+                wd(a/100+'0');
+	        }else{
+	            wc(0xc0+(ci-3)*4-1);
+                wd(a%10+'0');
+	            wc(0xc0+(ci-3)*4-2);
+                wd((a/10)%10+'0');
+                wc(0xc0+(ci-3)*4-3);
+	            wd(a/100+'0');
+	        }
+	        ci++;
+	        if(ci>8){
+	            ci=0;
+	            for(;ci<16;ci++){
+	                wc(0x80+ci);
+	                wd(' ');
+	                wc(0xc0+ci);
+	                wd(' ');
+	            }
+	            ci=0;
+	        }
+	        //delay_ms(1000);
+	    }
+
+
+
 
 	    //I2C
 
 
         I2C1602_wc(0x80);
+        I2C1602_wc(0x80);//2条命令是为了避免一个BUG
         I2C1602_wd('2');
         I2C1602_wc(0x81);
         I2C1602_wd('0');
