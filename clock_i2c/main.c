@@ -217,7 +217,7 @@ unsigned char HEX2BCD(unsigned char a){
 
 //√Î±Ì
 unsigned long a=0;
-unsigned char pause=0;
+unsigned char pause=1;
 #pragma vector = TIMERA0_VECTOR
 __interrupt void Timer_A(void){
     //P6OUT=~P6OUT;
