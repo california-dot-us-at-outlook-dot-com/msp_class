@@ -425,7 +425,7 @@ void main(void)
 	WDTCTL = WDTPW | WDTHOLD;	// stop watchdog timer
 	unsigned char sec,min,hou,day,mon,yea,wee;
 	unsigned char Filcker=0;
-	unsigned char filcker=0;
+	unsigned long filcker=0;
 	unsigned char fre=0;
 	uchar bia=8;
 	uchar aia=2;
