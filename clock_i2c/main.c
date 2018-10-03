@@ -216,13 +216,14 @@ unsigned char HEX2BCD(unsigned char a){
 }
 
 //Ãë±í
-unsigned long a=0;
+unsigned long time=0;
 unsigned char pause=1;
+unsigned long record_TAR=0;
 #pragma vector = TIMERA0_VECTOR
 __interrupt void Timer_A(void){
     //P6OUT=~P6OUT;
     if(pause==0){
-        a++;
+        time++;
     }
 }
 
@@ -396,23 +397,24 @@ void I2C1602_init(){
 //interrupt_external
 unsigned char ci=0;
 unsigned char ifci=0;
-unsigned int tmp_TACCR0=32768;
+unsigned int tmp_TAR=32768;
 #pragma vector = PORT1_VECTOR
 __interrupt void Port1_ISR(void){
     if((P1IN & BIT0)==0){
+        record_TAR=TAR;
         ifci=1;
     }else if((P1IN &BIT1)==0){
         if(pause==0){
             pause=1;
-            tmp_TACCR0=TACCR0;
+            tmp_TAR=TAR;
         }else{
             pause=0;
-            TACCR0=tmp_TACCR0;
+            TAR=tmp_TAR;
         }
     }else if((P1IN & BIT2)==0){
-        a=0;
+        time=0;
         pause=1;
-        tmp_TACCR0=32768;
+        tmp_TAR=32768;
     }
     P1IFG &= 0;
 }
@@ -462,9 +464,10 @@ void main(void)
     */
     I2C1602_init();
     char *weekday[7]={"Sun\0","Mon\0","Tue\0","Wed\0","Thu\0","Fri\0","Sat\0"};
-	while(1){
-	    if(a>999){
-	        a=0;
+	unsigned char fps=0;
+    while(1){
+	    if(time>999){
+	        time=0;
 	    }
 	    sec=BCD2HEX(RC(0x00));
 	    min=BCD2HEX(RC(0x01));
@@ -531,32 +534,53 @@ void main(void)
 	    wd('>');
 */
 
-
+	    wc(0xc0+10);
+	    wd('F');
+	    wd('P');
+	    wd('S');
+	    wd(':');
 	    if(ifci==1){
 	        ifci=0;
-	        if(ci<4){
-	            wc(0x80+(ci+1)*4-2);
-	            wd(a%10+'0');
-	            wc(0x80+(ci+1)*4-3);
-	            wd((a/10)%10+'0');
-	            wc(0x80+(ci+1)*4-4);
-                wd(a/100+'0');
-	        }else{
-	            wc(0xc0+(ci-3)*4-1);
-                wd(a%10+'0');
-	            wc(0xc0+(ci-3)*4-2);
-                wd((a/10)%10+'0');
-                wc(0xc0+(ci-3)*4-3);
-	            wd(a/100+'0');
+	        if(ci<2){
+	            wc(0x80+(ci+1)*8-6);
+	            wd(time%10+'0');
+	            wc(0x80+(ci+1)*8-7);
+	            wd((time/10)%10+'0');
+	            wc(0x80+(ci+1)*8-8);
+                wd(time/100+'0');
+                wc(0x80+(ci+1)*8-5);
+                wd('.');
+                wc(0x80+(ci+1)*8-4);
+                wd(((record_TAR)*10)/32768+'0');
+
+                wc(0x80+(ci+1)*8-3);
+
+                wd((((record_TAR)*100)/32768)%10+'0');
+
+	        }else if(ci<3){
+	            wc(0xc0+(ci-1)*7-3);
+                wd(time%10+'0');
+	            wc(0xc0+(ci-1)*7-4);
+                wd((time/10)%10+'0');
+                wc(0xc0+(ci-1)*7-5);
+	            wd(time/100+'0');
+	            wc(0xc0+(ci-1)*7-2);
+	            wd('.');
+	            wc(0xc0+(ci-1)*7-1);
+	            wd((record_TAR*10)/32768+'0');
+	            wc(0xc0+(ci-1)*7-0);
+	            wd((((record_TAR)*100)/32768)%10+'0');
 	        }
 	        ci++;
-	        if(ci>8){
+	        if(ci>3){
 	            ci=0;
 	            for(;ci<16;ci++){
 	                wc(0x80+ci);
 	                wd(' ');
-	                wc(0xc0+ci);
-	                wd(' ');
+	                if(ci<10){
+	                    wc(0xc0+ci);
+	                    wd(' ');
+	                }
 	            }
 	            ci=0;
 	        }
@@ -605,7 +629,13 @@ void main(void)
         I2C1602_wd((hou)/10+'0');
         I2C1602_wc(0xc0+1+bia);
         I2C1602_wd((hou%10)+'0');
+        fps++;
         if(Filcker!=sec){
+            wc(0xc0+14);
+            wd(fps/10+'0');
+            wc(0xc0+15);
+            wd(fps%10+'0');
+            fps=0;
             Filcker=sec;
             I2C1602_wc(0xc0+2+bia);
             I2C1602_wd(' ');
@@ -615,8 +645,8 @@ void main(void)
             I2C1602_wd(':');
 
         }
-        if(filcker!=a){
-            filcker=a;
+        if(filcker!=time){
+            filcker=time;
             I2C1602_wc(0xc0);
             I2C1602_wd(' ');
             I2C1602_wc(0xc0+3+cia);
@@ -640,23 +670,14 @@ void main(void)
         I2C1602_wd((sec%10)+'0');
 
         I2C1602_wc(0xc0+2+cia);
-        I2C1602_wd(a%10+'0');
+        I2C1602_wd(time%10+'0');
         I2C1602_wc(0xc0+1+cia);
-        I2C1602_wd((a%100)/10+'0');
+        I2C1602_wd((time%100)/10+'0');
         I2C1602_wc(0xc0+cia);
-        I2C1602_wd(a/100+'0');
+        I2C1602_wd(time/100+'0');
 
-        if(P6OUT==0xf0){
-            P6OUT=0x0f;
-        }else{
-            P6OUT=0xf0;
-        }
 
 
 	}
 
-    /*while(1){
-        I2C1602_wc(0x80);
-        I2C1602_wd('Y');
-    }*/
 }
