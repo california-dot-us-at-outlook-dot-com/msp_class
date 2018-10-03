@@ -407,6 +407,9 @@ __interrupt void Port1_ISR(void){
         }else{
             pause=0;
         }
+    }else if((P1IN & BIT2)==0){
+        a=0;
+        pause=1;
     }
     P1IFG &= 0;
 }
@@ -417,7 +420,8 @@ __interrupt void Port1_ISR(void){
 void main(void)
 {
 	WDTCTL = WDTPW | WDTHOLD;	// stop watchdog timer
-	unsigned char sec,min,hou,day,mon,yea;
+	unsigned char sec,min,hou,day,mon,yea,wee;
+	unsigned char Filcker=0;
 	uchar bia=8;
 	uchar aia=2;
 	uchar cia=1;
@@ -434,8 +438,8 @@ void main(void)
 
 //init of externalInterruption
     P1DIR &= BIT1+BIT0;
-    P1IES |= BIT0+BIT1; //0:上升沿；    1：下降沿
-    P1IE |= BIT0+BIT1;  //中断允许，1为允许
+    P1IES |= BIT0+BIT1+BIT2; //0:上升沿；    1：下降沿
+    P1IE |= BIT0+BIT1+BIT2;  //中断允许，1为允许
     P1IFG &= 0;  //中断标志，0为可接受中断
 
 
@@ -449,9 +453,10 @@ void main(void)
     WC(0x04,0x29);//day
     WC(0x05,0x09);//mon
     WC(0x06,0x18);//yea
+    WC(0x03,0x03);//wee
     */
     I2C1602_init();
-
+    char *weekday[7]={"Sun\0","Mon\0","Tue\0","Wed\0","Thu\0","Fri\0","Sat\0"};
 	while(1){
 	    if(a>999){
 	        a=0;
@@ -462,6 +467,7 @@ void main(void)
 	    day=BCD2HEX(RC(0x04));
 	    mon=BCD2HEX(RC(0x05));
 	    yea=BCD2HEX(RC(0x06));
+	    wee=BCD2HEX(RC(0x03));
 /*
 	    wc(0x80);
 	    wd('2');
@@ -556,10 +562,15 @@ void main(void)
 
 
 	    //I2C
+        I2C1602_wc(0x80);
+        //2条命令是为了避免一个BUG
+	    I2C1602_wc(0x80+12);
+	    I2C1602_wd(weekday[wee][0]);
+        I2C1602_wd(weekday[wee][1]);
+        I2C1602_wd(weekday[wee][2]);
 
 
         I2C1602_wc(0x80);
-        I2C1602_wc(0x80);//2条命令是为了避免一个BUG
         I2C1602_wd('2');
         I2C1602_wc(0x81);
         I2C1602_wd('0');
@@ -589,9 +600,25 @@ void main(void)
         I2C1602_wd((hou)/10+'0');
         I2C1602_wc(0xc0+1+bia);
         I2C1602_wd((hou%10)+'0');
+        if(Filcker!=sec){
+            Filcker=sec;
+            I2C1602_wc(0xc0+2+bia);
+            I2C1602_wd(' ');
+            if(pause==0){
+                        I2C1602_wc(0xc0);
+                        I2C1602_wd(' ');
+                        I2C1602_wc(0xc0+3+cia);
+                        I2C1602_wd(' ');
+            }
+        }else{
+            I2C1602_wc(0xc0+2+bia);
+            I2C1602_wd(':');
+            I2C1602_wc(0xc0);
+            I2C1602_wd('<');
+            I2C1602_wc(0xc0+3+cia);
+            I2C1602_wd('>');
 
-        I2C1602_wc(0xc0+2+bia);
-        I2C1602_wd(':');
+        }
 
         I2C1602_wc(0xc0+3+bia);
         I2C1602_wd((min)/10+'0');
@@ -610,10 +637,7 @@ void main(void)
         I2C1602_wc(0xc0+cia);
         I2C1602_wd(a/100+'0');
 
-        I2C1602_wc(0xc0);
-        I2C1602_wd('<');
-        I2C1602_wc(0xc0+3+cia);
-        I2C1602_wd('>');
+
 
 	}
 
