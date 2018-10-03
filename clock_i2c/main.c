@@ -10,7 +10,7 @@
 //#define delay_us(x) __delay_cycles((long)(CPU_F*(double)x/1000000.0))
 //#define delay_ms(x) __delay_cycles((long)(CPU_F*(double)x/1000.0))
 
-#define SDA BIT0
+#define SDA BIT0    //½Óds3231
 #define SCL BIT1
 #define portOut P5OUT
 #define portIn P5IN
@@ -23,7 +23,7 @@
 #define portSclOut portDir |= SCL
 
 
-#define SDA1 BIT0
+#define SDA1 BIT0   //½ÓI2C1602
 #define SCL1 BIT1
 #define port1Out P4OUT
 #define port1In P4IN
@@ -399,11 +399,17 @@ void I2C1602_init(){
 unsigned char ci=0;
 unsigned char ifci=0;
 //unsigned int tmp_TAR=32768;
+
+unsigned long tmp_Time=0;
+//unsigned long tmp_mTime=0;
+
 #pragma vector = PORT1_VECTOR
 __interrupt void Port1_ISR(void){
+
     if((P1IN & BIT0)==0){
         if(pause==0){
             record_TAR=TAR;
+            tmp_Time=time;
         }else{
             record_TAR=tmp_TAR;
         }
@@ -421,6 +427,7 @@ __interrupt void Port1_ISR(void){
         pause=1;
         tmp_TAR=0;
     }
+    //delay_ms(500);
     P1IFG &= 0;
 }
 //
@@ -555,11 +562,11 @@ void main(void)
 	        ifci=0;
 	        if(ci<2){
 	            wc(0x80+(ci)*64+2);
-	            wd(time%10+'0');
+	            wd(tmp_Time%10+'0');
 	            wc(0x80+(ci)*64+1);
-	            wd((time/10)%10+'0');
+	            wd((tmp_Time/10)%10+'0');
 	            wc(0x80+(ci)*64);
-                wd(time/100+'0');
+                wd(tmp_Time/100+'0');
                 wc(0x80+(ci)*64+3);
                 wd('.');
                 wc(0x80+(ci)*64+4);
@@ -679,6 +686,28 @@ void main(void)
         I2C1602_wd((sec)/10+'0');
         I2C1602_wc(0xc0+7+bia);
         I2C1602_wd((sec%10)+'0');
+
+        int i=0;
+        if(sec/30>0){
+            I2C1602_wc(0xc0+5);
+            I2C1602_wd(' ');
+            I2C1602_wc(0xc0);
+            I2C1602_wd('H');
+        }else{
+            I2C1602_wc(0xc0);
+            I2C1602_wd(' ');
+            I2C1602_wc(0xc0+5);
+            I2C1602_wd('L');
+        }
+        for(i=0;i<4;i++){
+        I2C1602_wc(0xc0+4-i);
+        if((HEX2BCD(sec)>>i)&BIT0!=0x00){
+            I2C1602_wd('>');
+        }else{
+            I2C1602_wd(' ');
+        }
+        }
+
 
         wc(0x80+11);
         wd(time%10+'0');
