@@ -217,6 +217,7 @@ unsigned char HEX2BCD(unsigned char a){
 
 //√Î±Ì
 unsigned long time=0;
+unsigned long tmp_TAR=0;
 unsigned char pause=1;
 unsigned long record_TAR=0;
 #pragma vector = TIMERA0_VECTOR
@@ -397,11 +398,15 @@ void I2C1602_init(){
 //interrupt_external
 unsigned char ci=0;
 unsigned char ifci=0;
-unsigned int tmp_TAR=32768;
+//unsigned int tmp_TAR=32768;
 #pragma vector = PORT1_VECTOR
 __interrupt void Port1_ISR(void){
     if((P1IN & BIT0)==0){
-        record_TAR=TAR;
+        if(pause==0){
+            record_TAR=TAR;
+        }else{
+            record_TAR=tmp_TAR;
+        }
         ifci=1;
     }else if((P1IN &BIT1)==0){
         if(pause==0){
@@ -414,7 +419,7 @@ __interrupt void Port1_ISR(void){
     }else if((P1IN & BIT2)==0){
         time=0;
         pause=1;
-        tmp_TAR=32768;
+        tmp_TAR=0;
     }
     P1IFG &= 0;
 }
@@ -428,7 +433,8 @@ void main(void)
 	unsigned char sec,min,hou,day,mon,yea,wee;
 	unsigned char Filcker=0;
 	unsigned long filcker=0;
-	unsigned char fre=0;
+
+	//unsigned char
 	uchar bia=8;
 	uchar aia=2;
 	uchar cia=1;
@@ -463,6 +469,12 @@ void main(void)
     WC(0x03,0x03);//wee
     */
     I2C1602_init();
+    /*
+    wc(0xc0+4+cia);
+    wd('0');
+    wc(0xc0+5+cia);
+    wd('0');
+    */
     char *weekday[7]={"Sun\0","Mon\0","Tue\0","Wed\0","Thu\0","Fri\0","Sat\0"};
 	unsigned char fps=0;
     while(1){
@@ -542,22 +554,22 @@ void main(void)
 	    if(ifci==1){
 	        ifci=0;
 	        if(ci<2){
-	            wc(0x80+(ci+1)*8-6);
+	            wc(0x80+(ci)*64+2);
 	            wd(time%10+'0');
-	            wc(0x80+(ci+1)*8-7);
+	            wc(0x80+(ci)*64+1);
 	            wd((time/10)%10+'0');
-	            wc(0x80+(ci+1)*8-8);
+	            wc(0x80+(ci)*64);
                 wd(time/100+'0');
-                wc(0x80+(ci+1)*8-5);
+                wc(0x80+(ci)*64+3);
                 wd('.');
-                wc(0x80+(ci+1)*8-4);
+                wc(0x80+(ci)*64+4);
                 wd(((record_TAR)*10)/32768+'0');
-
-                wc(0x80+(ci+1)*8-3);
-
+                wc(0x80+(ci)*64+5);
                 wd((((record_TAR)*100)/32768)%10+'0');
 
-	        }else if(ci<3){
+	        }
+	        /*
+	        else if(ci<3){
 	            wc(0xc0+(ci-1)*7-3);
                 wd(time%10+'0');
 	            wc(0xc0+(ci-1)*7-4);
@@ -571,16 +583,15 @@ void main(void)
 	            wc(0xc0+(ci-1)*7-0);
 	            wd((((record_TAR)*100)/32768)%10+'0');
 	        }
+	        */
 	        ci++;
-	        if(ci>3){
+	        if(ci>2){
 	            ci=0;
-	            for(;ci<16;ci++){
+	            for(;ci<6;ci++){
 	                wc(0x80+ci);
 	                wd(' ');
-	                if(ci<10){
-	                    wc(0xc0+ci);
-	                    wd(' ');
-	                }
+	                wc(0xc0+ci);
+	                wd(' ');
 	            }
 	            ci=0;
 	        }
@@ -647,15 +658,15 @@ void main(void)
         }
         if(filcker!=time){
             filcker=time;
-            I2C1602_wc(0xc0);
-            I2C1602_wd(' ');
-            I2C1602_wc(0xc0+3+cia);
-            I2C1602_wd(' ');
+            wc(0x80+8);
+            wd(' ');
+            wc(0x80+14+cia);
+            wd(' ');
         }else{
-            I2C1602_wc(0xc0);
-            I2C1602_wd('<');
-            I2C1602_wc(0xc0+3+cia);
-            I2C1602_wd('>');
+            wc(0x80+8);
+            wd('<');
+            wc(0x80+15);
+            wd('>');
 
         }
 
@@ -669,14 +680,21 @@ void main(void)
         I2C1602_wc(0xc0+7+bia);
         I2C1602_wd((sec%10)+'0');
 
-        I2C1602_wc(0xc0+2+cia);
-        I2C1602_wd(time%10+'0');
-        I2C1602_wc(0xc0+1+cia);
-        I2C1602_wd((time%100)/10+'0');
-        I2C1602_wc(0xc0+cia);
-        I2C1602_wd(time/100+'0');
-
-
+        wc(0x80+11);
+        wd(time%10+'0');
+        wc(0x80+10);
+        wd((time%100)/10+'0');
+        wc(0x80+9);
+        wd(time/100+'0');
+        wc(0x80+12);
+        wd('.');
+        if(pause==0){
+            tmp_TAR=TAR;
+        }
+        wc(0x80+13);
+        wd((tmp_TAR*10)/32768+'0');
+        wc(0x80+14);
+        wd((((tmp_TAR)*100)/32768)%10+'0');
 
 	}
 
