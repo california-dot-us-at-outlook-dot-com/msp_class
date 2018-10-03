@@ -396,7 +396,7 @@ void I2C1602_init(){
 //interrupt_external
 unsigned char ci=0;
 unsigned char ifci=0;
-
+unsigned int tmp_TACCR0=32768;
 #pragma vector = PORT1_VECTOR
 __interrupt void Port1_ISR(void){
     if((P1IN & BIT0)==0){
@@ -404,12 +404,15 @@ __interrupt void Port1_ISR(void){
     }else if((P1IN &BIT1)==0){
         if(pause==0){
             pause=1;
+            tmp_TACCR0=TACCR0;
         }else{
             pause=0;
+            TACCR0=tmp_TACCR0;
         }
     }else if((P1IN & BIT2)==0){
         a=0;
         pause=1;
+        tmp_TACCR0=32768;
     }
     P1IFG &= 0;
 }
@@ -422,6 +425,8 @@ void main(void)
 	WDTCTL = WDTPW | WDTHOLD;	// stop watchdog timer
 	unsigned char sec,min,hou,day,mon,yea,wee;
 	unsigned char Filcker=0;
+	unsigned char filcker=0;
+	unsigned char fre=0;
 	uchar bia=8;
 	uchar aia=2;
 	uchar cia=1;
@@ -604,15 +609,19 @@ void main(void)
             Filcker=sec;
             I2C1602_wc(0xc0+2+bia);
             I2C1602_wd(' ');
-            if(pause==0){
-                        I2C1602_wc(0xc0);
-                        I2C1602_wd(' ');
-                        I2C1602_wc(0xc0+3+cia);
-                        I2C1602_wd(' ');
-            }
+
         }else{
             I2C1602_wc(0xc0+2+bia);
             I2C1602_wd(':');
+
+        }
+        if(filcker!=a){
+            filcker=a;
+            I2C1602_wc(0xc0);
+            I2C1602_wd(' ');
+            I2C1602_wc(0xc0+3+cia);
+            I2C1602_wd(' ');
+        }else{
             I2C1602_wc(0xc0);
             I2C1602_wd('<');
             I2C1602_wc(0xc0+3+cia);
@@ -637,6 +646,11 @@ void main(void)
         I2C1602_wc(0xc0+cia);
         I2C1602_wd(a/100+'0');
 
+        if(P6OUT==0xf0){
+            P6OUT=0x0f;
+        }else{
+            P6OUT=0xf0;
+        }
 
 
 	}
