@@ -93,6 +93,7 @@ unsigned char w(unsigned char d){
     delay_us(10);
     Scl(1);
     portSdaIn;
+    /*
     while(portIn&SDA){
         b++;
         if(b>200){
@@ -101,6 +102,7 @@ unsigned char w(unsigned char d){
             return 0;
         }
     }
+    */
     Scl(0);
     delay_us(10);
     return 1;
@@ -293,6 +295,7 @@ unsigned char w1(unsigned char d){
     delay_us(10);
     Scl1(1);
     portSda1In;
+    /*
     while(port1In&SDA1){
         b++;
         if(b>200){
@@ -301,6 +304,7 @@ unsigned char w1(unsigned char d){
             return 0;
         }
     }
+    */
     Scl1(0);
     delay_us(10);
     return 1;
