@@ -11,16 +11,19 @@
 unsigned char *wave1;
 unsigned char *wave11;
 unsigned long timeDiv;
-unsigned long scale=1000;
+long scale=1000;
 unsigned char pause=0;
 
 #pragma vector = PORT1_VECTOR
 __interrupt void Port1_ISR(void){
+    if(!scale){
+        scale=1000;
+    }
     P6OUT=~P6OUT;
     if(!(P1IN&BIT0)){
-        scale+=200;
+        scale>>=1;
     }else if(!(P1IN&BIT1)){
-        scale-=200;
+        scale<<=1;
     }else if(!(P1IN&BIT2)){
         pause=!pause;
     }
@@ -53,14 +56,14 @@ int main(void)
 	            _EINT();    //开启总中断
 
 	wave1=(unsigned char *)malloc(sizeof(char)*61);
-	//wave11=(unsigned char*)malloc(sizeof(char)*61);
+	wave11=(unsigned char*)malloc(sizeof(char)*61);
 	adcInit();
 	TFT_Initial();
 	P6DIR=0xff;
 	P6OUT=0xf0;
 	unsigned int lx;
 	unsigned int ly;
-	unsigned char i=0;
+//	unsigned char i=0;
 
 	LCD_SetPos(0,240,0,320);
 	for(lx=0;lx<240;lx++){
@@ -77,33 +80,44 @@ int main(void)
 	    for(lx=0;lx<240;lx++){
 	        Write_Data(0xff,0xff);
 	    }
+
+	    LCD_SetPos(0,120,300,300);
+	                    for(lx=0;lx<240;lx++){
+
+	                            Write_Data(0xf8,0x1f);
+	                    }
+	unsigned long loop=0;
 	while(1){
-	    ly=(adcTrans());
-	    //delay_us(1);
-	    //wave1[i]=ly>20?(ly>>4):20;
-	    wave1[i]=ly>>4;
-	    //wave1[i]=255;
-	    //wave11[i]=ly>>4;
-	    for(lx=0;lx<scale;lx++){
-	        delay_us(1);
+	    //采样
+	    /////////////////////////////////////////////////////////////
+	    for(loop=0;loop<61;loop++){
+	        ly=(adcTrans());
+
+	        wave1[loop]=ly>>4;
+	        //wave11[i/2]=ly>>4;
+	        for(lx=0;lx<scale;lx++){
+	            delay_us(1);
+	        }
 	    }
-	    i++;
-	    if(i>60){
-	        i=0;
+
+	    ///////////////////////////////////////////////////////////////
+
+//画曲线
+	                                            ////////////////////////////////////////////////////////////////
 	        unsigned char ramp;
 	        unsigned int height;
 	        unsigned char upordown;
 	        for(lx=0;lx<240;lx+=4){
 	            if(wave1[lx/4]<wave1[lx/4+1]){
 	                ramp=wave1[lx/4+1]-wave1[lx/4];
-	                upordown=1;
+	                upordown=0;
 	            }else{
 	                ramp=wave1[lx/4]-wave1[lx/4+1];
-	                upordown=0;
+	                upordown=1;
 	            }
                 ramp=ramp>4?ramp:4;
 
-	                height=wave1[lx/4]+25;
+	                height=280-wave1[lx/4];
 
 	            if(upordown){
 	                LCD_SetPos(lx,lx+4,height,height+ramp);
@@ -111,7 +125,7 @@ int main(void)
                     LCD_SetPos(lx,lx+4,height-ramp,height);
 
 	            }
-	            for(i=0;i<ramp;i++){
+	            for(loop=0;loop<ramp;loop++){
 	                Write_Data(0xf8,0x00);
 	                Write_Data(0xf8,0x00);
 	                Write_Data(0xf8,0x00);
@@ -119,26 +133,29 @@ int main(void)
 	                Write_Data(0xf8,0x00);
 	            }
 	        }
-	        delay_ms(500);
+
+	        for(loop=0;loop<scale;loop++){
+	            delay_us(100);
+	        }
 	        while(pause);
 	        for(lx=0;lx<240;lx+=4){
 	            if(wave1[lx/4]<wave1[lx/4+1]){
 	                ramp=wave1[lx/4+1]-wave1[lx/4];
-	                upordown=1;
+	                upordown=0;
 	            }else{
 	                ramp=wave1[lx/4]-wave1[lx/4+1];
-	                upordown=0;
+	                upordown=1;
 	            }
 	            ramp=ramp>4?ramp:4;
 
-	                                            height=wave1[lx/4]+25;
+	                                            height=280-wave1[lx/4];
 
 	                        if(upordown){
 	                                            LCD_SetPos(lx,lx+4,height,height+ramp);
 	                                        }else{
 	                                            LCD_SetPos(lx,lx+4,height-ramp,height);
 
-	                                        }	            for(i=0;i<ramp;i++){
+	                                        }	            for(loop=0;loop<ramp;loop++){
 	                Write_Data(0,0x00);
 	                Write_Data(0,0);
 	                Write_Data(0,0x00);
@@ -146,8 +163,34 @@ int main(void)
 	                Write_Data(0,0x00);
 	            }
 	        }
-	        i=0;
-	    }
+	        /////////////////////////////////////////////////////////////////////////////
+	        //画1/2、1/4、3/4线
+	                //////////////////////////////////////////////////////////////////
+	                        LCD_SetPos(0,239,153,153);
+	                        for(lx=0;lx<240;lx++){
+	                            if(lx%3){
+	                                Write_Data(0x07,0xe0);
+	                            }else{
+	                            Write_Data(0x00,0x00);
+	                        }
+	                    }
+	                        LCD_SetPos(0,239,86,86);
+	                                        for(lx=0;lx<240;lx++){
+	                                            if(!(lx%3)){
+	                                                Write_Data(0xf8,0x1f);
+	                                            }else{
+	                                            Write_Data(0x00,0x00);
+	                                        }
+	                                    }
+	                                        LCD_SetPos(0,239,219,219);
+	                                                        for(lx=0;lx<240;lx++){
+	                                                            if(!(lx%3)){
+	                                                                Write_Data(0xff,0xe0);
+	                                                            }else{
+	                                                            Write_Data(0x00,0x00);
+	                                                        }
+	                                                    }
+	        ///////////////////////////////////////////////////////////////////////////////////////////////
 	}
 	
 	return 0;
