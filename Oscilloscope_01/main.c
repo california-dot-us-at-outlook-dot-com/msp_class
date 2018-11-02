@@ -12,7 +12,7 @@ unsigned char *wave1;
 unsigned char *wave11;
 unsigned long timeDiv;
 unsigned long scale=1000;
-
+unsigned char pause=0;
 
 #pragma vector = PORT1_VECTOR
 __interrupt void Port1_ISR(void){
@@ -21,6 +21,8 @@ __interrupt void Port1_ISR(void){
         scale+=200;
     }else if(!(P1IN&BIT1)){
         scale-=200;
+    }else if(!(P1IN&BIT2)){
+        pause=!pause;
     }
 
     P1IFG &= 0;
@@ -45,8 +47,8 @@ int main(void)
 	        P6DIR=0xff;
 	        P1DIR &= 0;
 	        P1SEL=0x00;
-	            P1IES |= BIT0+BIT1; //0:上升沿；    1：下降沿
-	            P1IE |= BIT0+BIT1;  //中断允许，1为允许
+	            P1IES |= BIT0+BIT1+BIT2; //0:上升沿；    1：下降沿
+	            P1IE |= BIT0+BIT1+BIT2;  //中断允许，1为允许
 	            P1IFG &= 0;  //中断标志，0为可接受中断
 	            _EINT();    //开启总中断
 
@@ -59,6 +61,7 @@ int main(void)
 	unsigned int lx;
 	unsigned int ly;
 	unsigned char i=0;
+
 	LCD_SetPos(0,240,0,320);
 	for(lx=0;lx<240;lx++){
 	    for(ly=0;ly<360;ly++){
@@ -66,11 +69,20 @@ int main(void)
 	        Write_Data(0,0x00);
 	    }
 	}
+	LCD_SetPos(0,239,285,285);
+	    for(lx=0;lx<240;lx++){
+	        Write_Data(0x00,0x1f);
+	}
+	LCD_SetPos(0,239,20,20);
+	    for(lx=0;lx<240;lx++){
+	        Write_Data(0xff,0xff);
+	    }
 	while(1){
 	    ly=(adcTrans());
 	    //delay_us(1);
 	    //wave1[i]=ly>20?(ly>>4):20;
 	    wave1[i]=ly>>4;
+	    //wave1[i]=255;
 	    //wave11[i]=ly>>4;
 	    for(lx=0;lx<scale;lx++){
 	        delay_us(1);
@@ -79,7 +91,7 @@ int main(void)
 	    if(i>60){
 	        i=0;
 	        unsigned char ramp;
-	        unsigned char height;
+	        unsigned int height;
 	        unsigned char upordown;
 	        for(lx=0;lx<240;lx+=4){
 	            if(wave1[lx/4]<wave1[lx/4+1]){
@@ -89,9 +101,9 @@ int main(void)
 	                ramp=wave1[lx/4]-wave1[lx/4+1];
 	                upordown=0;
 	            }
-                ramp=ramp>5?ramp:5;
+                ramp=ramp>4?ramp:4;
 
-	                height=wave1[lx/4]+32;
+	                height=wave1[lx/4]+25;
 
 	            if(upordown){
 	                LCD_SetPos(lx,lx+4,height,height+ramp);
@@ -108,7 +120,7 @@ int main(void)
 	            }
 	        }
 	        delay_ms(500);
-
+	        while(pause);
 	        for(lx=0;lx<240;lx+=4){
 	            if(wave1[lx/4]<wave1[lx/4+1]){
 	                ramp=wave1[lx/4+1]-wave1[lx/4];
@@ -117,9 +129,9 @@ int main(void)
 	                ramp=wave1[lx/4]-wave1[lx/4+1];
 	                upordown=0;
 	            }
-	            ramp=ramp>5?ramp:5;
+	            ramp=ramp>4?ramp:4;
 
-	                                            height=wave1[lx/4]+32;
+	                                            height=wave1[lx/4]+25;
 
 	                        if(upordown){
 	                                            LCD_SetPos(lx,lx+4,height,height+ramp);
