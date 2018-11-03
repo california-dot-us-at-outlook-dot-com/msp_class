@@ -63,6 +63,8 @@ void Write_Cmd_Data(unsigned char,unsigned int );
 void LCD_SetPos(unsigned int ,unsigned int,unsigned int,unsigned int);
 void TFT_Initial();
 
+void displayNums(unsigned int ,unsigned int,unsigned char);
+void clearNums(unsigned int ,unsigned int,unsigned char);
 
 
 #endif /* TFT_H_ */

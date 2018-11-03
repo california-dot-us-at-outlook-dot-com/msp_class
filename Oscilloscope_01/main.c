@@ -8,13 +8,14 @@
 #include"TFT.h"
 #include"ADC.h"
 #include<stdlib.h>
+
 unsigned char *wave1;
 unsigned char *wave11;
 unsigned long timeDiv;
 long scale=1000;
 unsigned char pause=0;
 unsigned char middle=0;//使波形居中
-#define bia -10//bia最小为-10
+#define bia 3//bia最小为-10
 
 #pragma vector = PORT1_VECTOR
 __interrupt void Port1_ISR(void){
@@ -92,33 +93,55 @@ int main(void)
 
 	                            Write_Data(0xf8,0x1f);
 	                    }
+
+	displayNums(2,0,3);
+	displayNums(10,0,10);
+	displayNums(18,0,3);
+	displayNums(26,0,11);
+
+	displayNums(2,275,0);
+	displayNums(10,275,11);
+
+
+
+
 	unsigned long loop=0;
-	unsigned char waveTop=0;
+	unsigned char waveTop=0;//绝对电压最大值
 	unsigned char waveBottom=0;
-	unsigned char waveMax=0;
-	unsigned char waveMin=0;
+	unsigned char waveMax=0;//相对电压最大
+	unsigned char waveMin=255;
+	unsigned long waveAver=0;
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	while(1){
-	    int bias=128-((waveTop-waveBottom)/2);
+	    //int bias=128-((waveMax-waveMin)/2);
 	    //采样
 	    /////////////////////////////////////////////////////////////
-
+	    waveMax=0;
+	    waveMin=255;
+	    waveAver=0;
 	    for(loop=0;loop<61;loop++){
 	        ly=(adcTrans());
-	        if(middle){
-	            wave1[loop]=(ly>>4)+bias;
-	        }else{
+	      //  if(middle){
+	        //    wave1[loop]=(ly>>4)+bias;
+	          //  waveTop=waveMax-bias;
+	            //waveBottom=waveMin-bias;
+	        //}else{
 	            wave1[loop]=ly>>4;
+	            waveAver+=wave1[loop];
 	            waveMax=(wave1[loop]>waveMax?wave1[loop]:waveMax);
 	            waveMin=(wave1[loop]<waveMin?wave1[loop]:waveMin);
-	        }
+	          //  waveTop=waveMax;
+	            //waveBottom=waveMin;
+	        //}
 
 	        //wave11[i/2]=ly>>4;
 	        for(lx=0;lx<scale;lx++){
 	            delay_us(1);
 	        }
 	    }
-	    waveTop=waveMax;
-	    waveBottom=waveMin;
+	    waveAver=waveAver/60;
+	    //waveTop=waveMax;
+	    //waveBottom=waveMin;
 	    ///////////////////////////////////////////////////////////////
 
 //画曲线
@@ -153,9 +176,41 @@ int main(void)
 	            }
 	        }
 
+	        //写电压最大值
+	        displayNums(48,280+bia,waveMax/77);
+	        displayNums(56,280+bia,10);
+	        displayNums(64,280+bia,(waveMax%77)/7.7);
+	        displayNums(72,280+bia,((waveMax%77)%8)/0.77);
+	        displayNums(80,280+bia,11);
+
+	        //写电压最小值
+	                    displayNums(48,298+bia,waveMin/77);
+	                    displayNums(56,298+bia,10);
+	                    displayNums(64,298+bia,(waveMin%77)/7.7);
+	                    displayNums(72,298+bia,((waveMin%77)%8)/0.77);
+	                    displayNums(80,298+bia,11);
+
+	                    //写峰峰值
+	                                            displayNums(48+40,288+bia,(waveMax-waveMin)/77);
+	                                            displayNums(56+40,288+bia,10);
+	                                            displayNums(64+40,288+bia,((waveMax-waveMin)%77)/7.7);
+	                                            displayNums(72+40,288+bia,(((waveMax-waveMin)%77)%8)/0.77);
+	                                            displayNums(80+40,288+bia,11);
+
+	        //写电压平均值
+	        displayNums(96+50,288+bia,waveAver/77);
+	                    displayNums(104+50,288+bia,10);
+	                    displayNums(112+50,288+bia,(waveAver%77)/7.7);
+	                    displayNums(120+50,288+bia,((waveAver%77)%8)/0.77);
+	                    displayNums(128+50,288+bia,11);
+
+
+//////////////显示的延时
+	        ////////////////////////////////////////////////////////////////////////
 	        for(loop=0;loop<scale;loop++){
 	            delay_us(100);
 	        }
+	        /////////////////////////////////////////////////
 	        while(pause);
 	        for(lx=0;lx<240;lx+=4){
 	            if(wave1[lx/4]<wave1[lx/4+1]){
