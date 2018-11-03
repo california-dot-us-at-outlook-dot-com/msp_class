@@ -1,7 +1,7 @@
 ******************************************************************************
                   MSP430 Linker PC v18.1.2                     
 ******************************************************************************
->> Linked Sat Nov  3 17:30:18 2018
+>> Linked Sat Nov  3 17:46:38 2018
 
 OUTPUT FILE NAME:   <Oscilloscope_01.out>
 ENTRY POINT SYMBOL: "_c_int00_noargs"  address: 00002c1a

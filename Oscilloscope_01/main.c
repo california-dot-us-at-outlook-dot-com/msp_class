@@ -22,6 +22,10 @@ unsigned long cloop=65536;
 #pragma vector = PORT1_VECTOR
 __interrupt void Port1_ISR(void){
 
+    if(!scale){
+        scale=1000;
+    }
+
     if(!(P1IN&BIT0)){
         scale>>=1;
     }else if(!(P1IN&BIT1)){
@@ -31,9 +35,7 @@ __interrupt void Port1_ISR(void){
     }else if(!(P1IN&BIT3)){
         middle=!middle;
     }
-    if(!scale){
-        scale=1000;
-    }
+
     if(scale>65536){
         scale=1000;
     }
