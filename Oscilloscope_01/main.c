@@ -15,6 +15,8 @@ unsigned long timeDiv;
 long scale=1000;
 unsigned char pause=0;
 unsigned char middle=0;//使波形居中
+unsigned long cloop=65536;
+
 #define bia 3//bia最小为-10
 
 #pragma vector = PORT1_VECTOR
@@ -38,6 +40,15 @@ __interrupt void Port1_ISR(void){
     P1IFG &= 0;
 }
 
+unsigned long timeA=0;
+unsigned int tmpTAR=0;
+#pragma vector = TIMERA0_VECTOR
+__interrupt void Timer_A(void){
+    if(cloop!=35536){
+        timeA++;
+    }
+}
+
 
 int main(void)
 {
@@ -45,14 +56,11 @@ int main(void)
 	Clock_Init();
 	P1DIR |= 0x0f;
 	    P1SEL |= 0x0f;
-	    CCR0=32767;
-	    TACTL=TASSEL_2+MC_1;
+	    TACCR0=10000;
+	    TACTL=TASSEL_2+MC_1+ID_3;
+	    TACCTL0=CCIE;
 
-	        CCR1=12580;
-	        CCTL1=OUTMOD_3; //先为0，遇到CCR1变为1，遇到CCR0变为0
 
-	        CCR2=12580;
-	        CCTL2=OUTMOD_7;//先为1，遇到CCR1变为0，遇到CCR0变为1
 
 	        P6DIR=0xff;
 	        P1DIR &= 0;
@@ -79,7 +87,7 @@ int main(void)
 	        Write_Data(0,0x00);
 	    }
 	}
-	LCD_SetPos(0,239,275+bia,275+bia);
+	LCD_SetPos(0,239,277+bia,277+bia);
 	    for(lx=0;lx<240;lx++){
 	        Write_Data(0x00,0x1f);
 	}
@@ -94,11 +102,22 @@ int main(void)
 	                            Write_Data(0xf8,0x1f);
 	                    }
 
+
+
+	//画刻度
+	unsigned char i;
+	for(i=0;i<240;i+=24){
+	    LCD_SetPos(i,i,275+bia,277+bia);
+	    Write_Data(0xf8,0x00);
+	    Write_Data(0xf8,0x00);
+	    Write_Data(0xf8,0x00);
+	}
+	//3.3V
 	displayNums(2,0,3);
 	displayNums(10,0,10);
 	displayNums(18,0,3);
 	displayNums(26,0,11);
-
+//0V
 	displayNums(2,275,0);
 	displayNums(10,275,11);
 
@@ -119,17 +138,19 @@ int main(void)
 	    waveMax=0;
 	    waveMin=255;
 	    waveAver=0;
-	    for(loop=0;loop<61;loop++){
+	    timeA=0;
+	    TAR=0;
+	    for(cloop=0;cloop<61;cloop++){
 	        ly=(adcTrans());
 	      //  if(middle){
 	        //    wave1[loop]=(ly>>4)+bias;
 	          //  waveTop=waveMax-bias;
 	            //waveBottom=waveMin-bias;
 	        //}else{
-	            wave1[loop]=ly>>4;
-	            waveAver+=wave1[loop];
-	            waveMax=(wave1[loop]>waveMax?wave1[loop]:waveMax);
-	            waveMin=(wave1[loop]<waveMin?wave1[loop]:waveMin);
+	            wave1[cloop]=ly>>4;
+	            waveAver+=wave1[cloop];
+	            waveMax=(wave1[cloop]>waveMax?wave1[cloop]:waveMax);
+	            waveMin=(wave1[cloop]<waveMin?wave1[cloop]:waveMin);
 	          //  waveTop=waveMax;
 	            //waveBottom=waveMin;
 	        //}
@@ -139,6 +160,8 @@ int main(void)
 	            delay_us(1);
 	        }
 	    }
+	    cloop=65536;
+	    tmpTAR=TAR;
 	    waveAver=waveAver/60;
 	    //waveTop=waveMax;
 	    //waveBottom=waveMin;
@@ -205,6 +228,18 @@ int main(void)
 	                    displayNums(128+50,288+bia,11);
 
 
+	        //写时间间隔
+	                    displayNums(200,281,timeA/100);
+	                    displayNums(208,281,(timeA%100)/10);
+	                    displayNums(216,281,(timeA%10));
+	                    displayNums(224,281,12);
+	                    displayNums(232,281,14);
+
+	                    displayNums(200,300,tmpTAR/1000);
+	                    displayNums(208,300,(tmpTAR%1000)/100);
+	                    displayNums(216,300,0);
+                        displayNums(224,300,13);
+                        displayNums(232,300,14);
 //////////////显示的延时
 	        ////////////////////////////////////////////////////////////////////////
 	        for(loop=0;loop<scale;loop++){
