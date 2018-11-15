@@ -71,15 +71,19 @@ __interrupt void UART0_RX_ISR(void)
   unsigned char data=0;
   //data=U0RXBUF;                       //接收到的数据存起来
   rx[i]=U0RXBUF;
+  P6OUT++;
   if(rx[i]=='\n'){
       i=0;
       display();
+  }else if(rx[i]==0){
+
   }else{
       i++;
   }
-  //Send_Byte(data);                    //将接收到的数据再发送出去
-  P6OUT=~data;
+  Send_Byte(0x74);                    //将接收到的数据再发送出去
+  //P6OUT=~data;
 }
+
 void Clock_Init()
 {
   unsigned char i;
@@ -153,6 +157,50 @@ __interrupt void Port1_ISR(void){
 }
 
 
+void init_spi(){
+    U0CTL |= SWRST;
+    U0CTL |= CHAR+SYNC+MM;
+    U0TCTL |= SSEL1+SSEL0+STC+CKPH;
+    //U0TCTL=CKPH;
+    //U0TCTL &= ~CKPL;
+    U0BR0=0x02;
+    U0BR1=0x00;
+    ME1 |= USPIE0;
+    U0CTL&=~SWRST;
+    IE1&=~UTXIE0;
+    IE1&=~URXIE0;
+    P3SEL|=0x0e;
+    P3DIR|=0x01;
+}
+
+void spi_sendByte(unsigned char dat){
+    U0TXBUF=dat;
+    while((IFG1&UTXIFG0)==0);
+    //IFG1&=~UTXIFG0;
+}
+
+
+unsigned char SPI_Read_Byte(void)
+
+{
+
+    IFG2 &= 0xCF;
+
+    U1TXBUF = 0xFF;
+
+    while(!(IFG2 & URXIFG1)); //判断URXIFG1为接收完成标志
+
+    return U0RXBUF;
+
+}
+
+unsigned char spi_RW_reg(unsigned char dat){
+    U0TXBUF=dat;
+    while(!(IFG1&UTXIFG0));
+    delay_ms(9);
+    return U0RXBUF;
+}
+
 unsigned char onePressed=0;
 unsigned char findPressed(){
     unsigned char a=1;
@@ -160,25 +208,25 @@ unsigned char findPressed(){
     unsigned char num=0;
     unsigned char num1=0;
     for(a=1;a<0x10;a<<=1){
-        P6DIR=0xff;
-        P6OUT=0x00;
-        P6DIR=0x0f;
-        P6OUT=a;
-        if(P6IN!=a){
+        P2DIR=0xff;
+        P2OUT=0x00;
+        P2DIR=0x0f;
+        P2OUT=a;
+        if(P2IN!=a){
             //P6OUT=~P5IN;
             b=1;
             if(onePressed){
                 break;
             }
-            unsigned char tmp=(P6IN>>4);
+            unsigned char tmp=(P2IN>>4);
             for(;tmp;tmp>>=1){
                 num++;
             }
             num1=a;
             if(b){break;}
         }if(b){break;}
-        P6DIR=0xff;
-        P6OUT=0x00;
+        P2DIR=0xff;
+        P2OUT=0x00;
     }
     if(!b){
         onePressed=0;
@@ -188,18 +236,43 @@ unsigned char findPressed(){
     return (num)*4+num1;
 }
 
+void init_spi_slave(){
+      P3SEL = 0x0E;                             // Setup P3 for SPI mode
+      U0CTL = CHAR + SYNC + SWRST;              // 8-bit, SPI, Slave
+      U0TCTL = CKPL + STC;                      // Polarity, UCLK, 3-wire
+      ME1 = USPIE0;                             // Module enable
+      U0CTL &= ~SWRST;                          // SPI enable
+      IE1 |= URXIE0;//+UTXIE0;                            // Recieve interrupt enable
+      //_EINT();                                  // Enable interrupts
+
+}
+
+/*
+#pragma vector=USART0TX_VECTOR
+__interrupt void SPI0_tx (void){
+    unsigned char data=0;
+    Send_Byte(0x74);
+}
+*/
 
 int main(void)
 {
 	WDTCTL = WDTPW | WDTHOLD;	// stop watchdog timer
 	Clock_Init();
+	P6DIR=0xff;
+	P6OUT=0x00;
 	init1602();
 	tx=(unsigned char*)malloc(sizeof(unsigned char)*32);
 	rx=(unsigned char*)malloc(sizeof(unsigned char)*32);
 
-	UART_Init();
-	intInit();
+	//UART_Init();
+    //init_spi();
+    init_spi_slave();
+	//intInit();
+
+
 	_EINT();
+	Send_Byte(0x34);
 	unsigned char tmp;
 	unsigned char t;
 	unsigned char i;
@@ -215,10 +288,12 @@ int main(void)
 	    }
 	    if(tmp=='='){
 	        for(tmp=0;tmp<i;tmp++){
-	            Send_Byte(tx[tmp]);
+	            //Send_Byte(tx[tmp]);
+	            //spi_RW_reg(tx[tmp]);
 	            wc(0xc0+tmp);
 	            wd(' ');
 	        }
+	        //spi_RW_reg('\n');
 	        i=0;
 	    }else if(tmp!='0'){
 	        tx[i]=t;

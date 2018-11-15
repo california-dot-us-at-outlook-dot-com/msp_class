@@ -1,0 +1,1 @@
+"./handle.obj" "./lcd12864.obj" "./main.obj" "./timeConfig.obj" "./uart.obj" "../lnk_msp430f169.cmd" -llibc.a 

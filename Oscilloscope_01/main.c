@@ -8,7 +8,7 @@
 #include"TFT.h"
 #include"ADC.h"
 #include<stdlib.h>
-
+#include"Touch.h"
 unsigned char *wave1;
 unsigned char *wave11;
 unsigned long timeDiv;
@@ -22,7 +22,7 @@ unsigned long cloop=65536;
 #pragma vector = PORT1_VECTOR
 __interrupt void Port1_ISR(void){
 
-    if(!scale){
+    if((!scale)&&(!(P1IN&BIT0))){
         scale=1000;
     }
 
@@ -46,7 +46,7 @@ unsigned long timeA=0;
 unsigned int tmpTAR=0;
 #pragma vector = TIMERA0_VECTOR
 __interrupt void Timer_A(void){
-    if(cloop!=35536){
+    if(cloop!=65536){
         timeA++;
     }
 }
@@ -74,13 +74,18 @@ int main(void)
 
 	wave1=(unsigned char *)malloc(sizeof(char)*61);
 	wave11=(unsigned char*)malloc(sizeof(char)*61);
+	//ADC
 	adcInit();
+	//touch
+	start_7843();
+	//TFT
 	TFT_Initial();
 	P6DIR=0xff;
 	P6OUT=0xf0;
 	unsigned int lx;
 	unsigned int ly;
 //	unsigned char i=0;
+
 
 	LCD_SetPos(0,240,0,320);
 	for(lx=0;lx<240;lx++){
@@ -132,6 +137,8 @@ int main(void)
 	unsigned char waveMax=0;//相对电压最大
 	unsigned char waveMin=255;
 	unsigned long waveAver=0;
+
+	unsigned int curY=0;
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	while(1){
 	    //int bias=128-((waveMax-waveMin)/2);
@@ -248,7 +255,24 @@ int main(void)
 	            delay_us(100);
 	        }
 	        /////////////////////////////////////////////////
-	        while(pause);
+	        P6DIR=0xff;
+	        while(pause){
+
+	            unsigned char curX;
+	            if(Getpix()==1){
+	                //P6OUT=~P6OUT;
+	                P6OUT=~lty;
+	                LCD_SetPos(0,240,curY,curY);
+	                for(curX=0;curX<240;curX++){
+	                    Write_Data(0x00,0x00);
+	                }
+	                LCD_SetPos(0,240,lty,lty);
+	                curY=lty;
+	                for(curX=0;curX<240;curX++){
+	                    Write_Data(0xf8,0x00);
+	                }
+	            }
+	        }
 	        for(lx=0;lx<240;lx+=4){
 	            if(wave1[lx/4]<wave1[lx/4+1]){
 	                ramp=wave1[lx/4+1]-wave1[lx/4];

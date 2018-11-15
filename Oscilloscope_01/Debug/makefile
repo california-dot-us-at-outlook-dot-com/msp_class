@@ -12,6 +12,7 @@ GEN_CMDS__FLAG :=
 ORDERED_OBJS += \
 "./ADC.obj" \
 "./TFT.obj" \
+"./Touch.obj" \
 "./main.obj" \
 "./timeConfig.obj" \
 "../lnk_msp430f169.cmd" \
@@ -158,8 +159,8 @@ Oscilloscope_01.hex: $(EXE_OUTPUTS)
 # Other Targets
 clean:
 	-$(RM) $(BIN_OUTPUTS__QUOTED)$(EXE_OUTPUTS__QUOTED)
-	-$(RM) "ADC.obj" "TFT.obj" "main.obj" "timeConfig.obj" 
-	-$(RM) "ADC.d" "TFT.d" "main.d" "timeConfig.d" 
+	-$(RM) "ADC.obj" "TFT.obj" "Touch.obj" "main.obj" "timeConfig.obj" 
+	-$(RM) "ADC.d" "TFT.d" "Touch.d" "main.d" "timeConfig.d" 
 	-@echo 'Finished clean'
 	-@echo ' '
 
