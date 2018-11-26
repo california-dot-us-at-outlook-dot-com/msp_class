@@ -1,0 +1,1 @@
+"./DAC12.obj" "./DMA.obj" "./GUI.obj" "./TFT.obj" "./Touch.obj" "./main.obj" "./timeConfig.obj" "./timerA1_int.obj" "../lnk_msp430f169.cmd" -llibc.a 
