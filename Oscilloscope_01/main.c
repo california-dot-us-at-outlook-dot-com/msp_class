@@ -14,10 +14,10 @@ unsigned char *wave11;
 unsigned long timeDiv;
 long scale=1000;
 unsigned char pause=0;
-unsigned char middle=0;//Ê¹²¨ĞÎ¾ÓÖĞ
+unsigned char middle=0;//ä½¿æ³¢å½¢å±…ä¸­
 unsigned long cloop=65536;
 
-#define bia 3//bia×îĞ¡Îª-10
+#define bia 3//biaæœ€å°ä¸º-10
 
 #pragma vector = PORT1_VECTOR
 __interrupt void Port1_ISR(void){
@@ -44,13 +44,14 @@ __interrupt void Port1_ISR(void){
 
 unsigned long timeA=0;
 unsigned int tmpTAR=0;
+/*
 #pragma vector = TIMERA0_VECTOR
 __interrupt void Timer_A(void){
     if(cloop!=65536){
         timeA++;
     }
 }
-
+*/
 
 int main(void)
 {
@@ -67,10 +68,10 @@ int main(void)
 	        P6DIR=0xff;
 	        P1DIR &= 0;
 	        P1SEL=0x00;
-	            P1IES |= BIT0+BIT1+BIT2+BIT3; //0:ÉÏÉıÑØ£»    1£ºÏÂ½µÑØ
-	            P1IE |= BIT0+BIT1+BIT2+BIT3;  //ÖĞ¶ÏÔÊĞí£¬1ÎªÔÊĞí
-	            P1IFG &= 0;  //ÖĞ¶Ï±êÖ¾£¬0Îª¿É½ÓÊÜÖĞ¶Ï
-	            _EINT();    //¿ªÆô×ÜÖĞ¶Ï
+	            P1IES |= BIT0+BIT1+BIT2+BIT3; //0:ä¸Šå‡æ²¿ï¼›    1ï¼šä¸‹é™æ²¿
+	            P1IE |= BIT0+BIT1+BIT2+BIT3;  //ä¸­æ–­å…è®¸ï¼Œ1ä¸ºå…è®¸
+	            P1IFG &= 0;  //ä¸­æ–­æ ‡å¿—ï¼Œ0ä¸ºå¯æ¥å—ä¸­æ–­
+	            _EINT();    //å¼€å¯æ€»ä¸­æ–­
 
 	wave1=(unsigned char *)malloc(sizeof(char)*61);
 	wave11=(unsigned char*)malloc(sizeof(char)*61);
@@ -111,7 +112,7 @@ int main(void)
 
 
 
-	//»­¿Ì¶È
+	//ç”»åˆ»åº¦
 	unsigned char i;
 	for(i=0;i<240;i+=24){
 	    LCD_SetPos(i,i,275+bia,277+bia);
@@ -132,9 +133,9 @@ int main(void)
 
 
 	unsigned long loop=0;
-	unsigned char waveTop=0;//¾ø¶ÔµçÑ¹×î´óÖµ
+	unsigned char waveTop=0;//ç»å¯¹ç”µå‹æœ€å¤§å€¼
 	unsigned char waveBottom=0;
-	unsigned char waveMax=0;//Ïà¶ÔµçÑ¹×î´ó
+	unsigned char waveMax=0;//ç›¸å¯¹ç”µå‹æœ€å¤§
 	unsigned char waveMin=255;
 	unsigned long waveAver=0;
 
@@ -142,7 +143,7 @@ int main(void)
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	while(1){
 	    //int bias=128-((waveMax-waveMin)/2);
-	    //²ÉÑù
+	    //é‡‡æ ·
 	    /////////////////////////////////////////////////////////////
 	    waveMax=0;
 	    waveMin=255;
@@ -176,7 +177,7 @@ int main(void)
 	    //waveBottom=waveMin;
 	    ///////////////////////////////////////////////////////////////
 
-//»­ÇúÏß
+//ç”»æ›²çº¿
 	                                            ////////////////////////////////////////////////////////////////
 	        unsigned char ramp;
 	        unsigned int height;
@@ -208,28 +209,28 @@ int main(void)
 	            }
 	        }
 
-	        //Ğ´µçÑ¹×î´óÖµ
+	        //å†™ç”µå‹æœ€å¤§å€¼
 	        displayNums(48,280+bia,waveMax/77);
 	        displayNums(56,280+bia,10);
 	        displayNums(64,280+bia,(waveMax%77)/7.7);
 	        displayNums(72,280+bia,((waveMax%77)%8)/0.77);
 	        displayNums(80,280+bia,11);
 
-	        //Ğ´µçÑ¹×îĞ¡Öµ
+	        //å†™ç”µå‹æœ€å°å€¼
 	                    displayNums(48,298+bia,waveMin/77);
 	                    displayNums(56,298+bia,10);
 	                    displayNums(64,298+bia,(waveMin%77)/7.7);
 	                    displayNums(72,298+bia,((waveMin%77)%8)/0.77);
 	                    displayNums(80,298+bia,11);
 
-	                    //Ğ´·å·åÖµ
+	                    //å†™å³°å³°å€¼
 	                                            displayNums(48+40,288+bia,(waveMax-waveMin)/77);
 	                                            displayNums(56+40,288+bia,10);
 	                                            displayNums(64+40,288+bia,((waveMax-waveMin)%77)/7.7);
 	                                            displayNums(72+40,288+bia,(((waveMax-waveMin)%77)%8)/0.77);
 	                                            displayNums(80+40,288+bia,11);
 
-	        //Ğ´µçÑ¹Æ½¾ùÖµ
+	        //å†™ç”µå‹å¹³å‡å€¼
 	        displayNums(96+50,288+bia,waveAver/77);
 	                    displayNums(104+50,288+bia,10);
 	                    displayNums(112+50,288+bia,(waveAver%77)/7.7);
@@ -237,7 +238,7 @@ int main(void)
 	                    displayNums(128+50,288+bia,11);
 
 
-	        //Ğ´Ê±¼ä¼ä¸ô
+	        //å†™æ—¶é—´é—´éš”
 	                    displayNums(200,281,timeA/100);
 	                    displayNums(208,281,(timeA%100)/10);
 	                    displayNums(216,281,(timeA%10));
@@ -249,7 +250,7 @@ int main(void)
 	                    displayNums(216,300,0);
                         displayNums(224,300,13);
                         displayNums(232,300,14);
-//////////////ÏÔÊ¾µÄÑÓÊ±
+//////////////æ˜¾ç¤ºçš„å»¶æ—¶
 	        ////////////////////////////////////////////////////////////////////////
 	        for(loop=0;loop<scale;loop++){
 	            delay_us(100);
@@ -299,7 +300,7 @@ int main(void)
 	            }
 	        }
 	        /////////////////////////////////////////////////////////////////////////////
-	        //»­1/2¡¢1/4¡¢3/4Ïß
+	        //ç”»1/2ã€1/4ã€3/4çº¿
 	                //////////////////////////////////////////////////////////////////
 	                        LCD_SetPos(0,239,143+bia,143+bia);
 	                        for(lx=0;lx<240;lx++){
