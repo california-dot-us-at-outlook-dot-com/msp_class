@@ -1,7 +1,7 @@
 /*
  * DMA.c
  *
- *  Created on: 2018Äê11ÔÂ26ÈÕ
+ *  Created on: 2018Ã„Ãª11Ã”Ã‚26ÃˆÃ•
  *      Author: Cal
  */
 #include"DMA.h"
@@ -20,7 +20,8 @@ void DMA_Init(){
 
 
 void DMA_trans(){
-    DMA0CTL |= DMAREQ;
+     //DMA1CTL /= DMAREQ;
+    //DMA0CTL |= DMAREQ;
     P6OUT = (P6OUT&(~BIT7))|((~P6OUT)&BIT7);
 
 }
