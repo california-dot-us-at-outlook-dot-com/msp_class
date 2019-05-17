@@ -48,7 +48,16 @@ unsigned int tmpTAR=0;
 #pragma vector = TIMERA0_VECTOR
 __interrupt void Timer_A(void){
     if(cloop!=65536){
-        timeA++;
+        timeA--;
+timeA++;timeA++;
+    }
+}
+*/
+/*
+#pragma vector = TIMERA0_VECTOR
+__interrupt void Timer_A(void){
+    if(cloop!=65536){
+     scale++;
     }
 }
 */
